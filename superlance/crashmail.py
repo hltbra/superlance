@@ -122,33 +122,10 @@ class CrashMail:
                    'unexpectedly (pid %(pid)s) from state %(from_state)s\n\n' %
                    pheaders)
 
-            if pheaders['groupname']:
-                proc_name = ':'.join([
-                    pheaders['groupname'],
-                    pheaders['processname']])
-            else:
-                proc_name = pheaders['processname']
-
             if self.stderr_lines:
-                rpc = childutils.getRPCInterface(os.environ)
-                last_lines = get_last_lines(
-                    proc_name,
-                    rpc.supervisor.tailProcessStderrLog,
-                    rpc.supervisor.readProcessStderrLog,
-                    self.stderr_lines)
-                msg += '-------LAST LINES OF STDERR---------\n'
-                msg += last_lines
-                msg += '-----------------END----------------\n'
+                msg += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
             if self.stdout_lines:
-                rpc = childutils.getRPCInterface(os.environ)
-                last_lines = get_last_lines(
-                    proc_name,
-                    rpc.supervisor.tailProcessStdoutLog,
-                    rpc.supervisor.readProcessStdoutLog,
-                    self.stdout_lines)
-                msg += '-------LAST LINES OF STDOUT---------\n'
-                msg += last_lines
-                msg += '-----------------END----------------\n'
+                msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
 
             subject = ' %s crashed at %s' % (pheaders['processname'],
                                              childutils.get_asctime())
@@ -176,7 +153,7 @@ class CrashMail:
 
 def main(argv=sys.argv):
     import getopt
-    short_args="hp:ao:s:m:r:t:"
+    short_args="hp:ao:s:m:q:w:"
     long_args=[
         "help",
         "program=",
