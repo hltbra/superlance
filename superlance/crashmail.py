@@ -65,6 +65,7 @@ crashmail.py -p program1 -p group1:program2 -m dev@example.com
 import os
 import sys
 
+from superlance.helpers import get_last_lines
 from supervisor import childutils
 
 def usage():
@@ -73,8 +74,14 @@ def usage():
 
 class CrashMail:
 
-    def __init__(self, programs, any, email, sendmail, optionalheader):
-
+    def __init__(self,
+            programs,
+            any,
+            email,
+            sendmail,
+            optionalheader,
+            stderr_lines=0,
+            stdout_lines=0):
         self.programs = programs
         self.any = any
         self.email = email
@@ -83,6 +90,8 @@ class CrashMail:
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         self.stderr = sys.stderr
+        self.stderr_lines = stderr_lines
+        self.stdout_lines = stdout_lines
 
     def runforever(self, test=False):
         while 1:
@@ -110,8 +119,36 @@ class CrashMail:
                 continue
 
             msg = ('Process %(processname)s in group %(groupname)s exited '
-                   'unexpectedly (pid %(pid)s) from state %(from_state)s' %
+                   'unexpectedly (pid %(pid)s) from state %(from_state)s\n\n' %
                    pheaders)
+
+            if pheaders['groupname']:
+                proc_name = ':'.join([
+                    pheaders['groupname'],
+                    pheaders['processname']])
+            else:
+                proc_name = pheaders['processname']
+
+            if self.stderr_lines:
+                rpc = childutils.getRPCInterface(os.environ)
+                last_lines = get_last_lines(
+                    proc_name,
+                    rpc.supervisor.tailProcessStderrLog,
+                    rpc.supervisor.readProcessStderrLog,
+                    self.stderr_lines)
+                msg += '-------LAST LINES OF STDERR---------\n'
+                msg += last_lines
+                msg += '-----------------END----------------\n'
+            if self.stdout_lines:
+                rpc = childutils.getRPCInterface(os.environ)
+                last_lines = get_last_lines(
+                    proc_name,
+                    rpc.supervisor.tailProcessStdoutLog,
+                    rpc.supervisor.readProcessStdoutLog,
+                    self.stdout_lines)
+                msg += '-------LAST LINES OF STDOUT---------\n'
+                msg += last_lines
+                msg += '-----------------END----------------\n'
 
             subject = ' %s crashed at %s' % (pheaders['processname'],
                                              childutils.get_asctime())
@@ -139,7 +176,7 @@ class CrashMail:
 
 def main(argv=sys.argv):
     import getopt
-    short_args="hp:ao:s:m:"
+    short_args="hp:ao:s:m:r:t:"
     long_args=[
         "help",
         "program=",
@@ -147,6 +184,8 @@ def main(argv=sys.argv):
         "optionalheader="
         "sendmail_program=",
         "email=",
+        "stderr_lines=",
+        "stdout_lines="
         ]
     arguments = argv[1:]
     try:
@@ -159,6 +198,8 @@ def main(argv=sys.argv):
     sendmail = '/usr/sbin/sendmail -t -i'
     email = None
     optionalheader = None
+    stderr_lines = 0
+    stdout_lines = 0
 
     for option, value in opts:
 
@@ -180,13 +221,19 @@ def main(argv=sys.argv):
         if option in ('-o', '--optionalheader'):
             optionalheader = value
 
+        if option in ('-r', '--stderr_lines'):
+            stderr_lines = int(value)
+
+        if option in ('-t', '--stdout_lines'):
+            stdout_lines = int(value)
+
     if not 'SUPERVISOR_SERVER_URL' in os.environ:
         sys.stderr.write('crashmail must be run as a supervisor event '
                          'listener\n')
         sys.stderr.flush()
         return
 
-    prog = CrashMail(programs, any, email, sendmail, optionalheader)
+    prog = CrashMail(programs, any, email, sendmail, optionalheader, stderr_lines, stdout_lines)
     prog.runforever()
 
 if __name__ == '__main__':

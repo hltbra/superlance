@@ -1,4 +1,6 @@
 import unittest
+from mock import patch
+from superlance.helpers import MAX_BYTES_TO_READ
 from superlance.compat import StringIO
 
 class CrashMailTests(unittest.TestCase):
@@ -17,12 +19,12 @@ class CrashMailTests(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tempdir)
 
-    def _makeOnePopulated(self, programs, any, response=None):
+    def _makeOnePopulated(self, programs, any, stderr_lines=0, stdout_lines=0, response=None):
         import os
         sendmail = 'cat - > %s' % os.path.join(self.tempdir, 'email.log')
         email = 'chrism@plope.com'
         header = '[foo]'
-        prog = self._makeOne(programs, any, email, sendmail, header)
+        prog = self._makeOne(programs, any, email, sendmail, header, stderr_lines, stdout_lines)
         prog.stdin = StringIO()
         prog.stdout = StringIO()
         prog.stderr = StringIO()
@@ -77,6 +79,52 @@ class CrashMailTests(unittest.TestCase):
         f.close()
         self.assertTrue(
             'Process foo in group bar exited unexpectedly' in mail)
+
+    @patch('superlance.crashmail.childutils.getRPCInterface')
+    def test_stderr_lines_should_use_stderr_tail(self, getRPCInterfaceMock):
+        supervisor_mock = getRPCInterfaceMock().supervisor
+        tailProcessStderrLogMock = supervisor_mock.tailProcessStderrLog
+        tailProcessStderrLogMock.return_value = ['test1\test2\n', 0, False]
+
+        programs = ['foo']
+        any = None
+        prog = self._makeOnePopulated(programs, any, stderr_lines=2)
+        payload=('expected:0 processname:foo groupname:bar '
+                 'from_state:RUNNING pid:1')
+        prog.stdin.write(
+            'eventname:PROCESS_STATE_EXITED len:%s\n' % len(payload))
+        prog.stdin.write(payload)
+        prog.stdin.seek(0)
+        prog.runforever(test=True)
+
+        tailProcessStderrLogMock.assert_called_with(
+            'bar:foo',
+            0,
+            MAX_BYTES_TO_READ
+        )
+
+    @patch('superlance.crashmail.childutils.getRPCInterface')
+    def test_stderr_lines_should_use_stdout_tail(self, getRPCInterfaceMock):
+        supervisor_mock = getRPCInterfaceMock().supervisor
+        tailProcessStdoutLogMock = supervisor_mock.tailProcessStdoutLog
+        tailProcessStdoutLogMock.return_value = ['test1\test2\n', 0, False]
+
+        programs = ['foo']
+        any = None
+        prog = self._makeOnePopulated(programs, any, stdout_lines=2)
+        payload=('expected:0 processname:foo groupname:bar '
+                 'from_state:RUNNING pid:1')
+        prog.stdin.write(
+            'eventname:PROCESS_STATE_EXITED len:%s\n' % len(payload))
+        prog.stdin.write(payload)
+        prog.stdin.seek(0)
+        prog.runforever(test=True)
+
+        tailProcessStdoutLogMock.assert_called_with(
+            'bar:foo',
+            0,
+            MAX_BYTES_TO_READ
+        )
 
 if __name__ == '__main__':
     unittest.main()
