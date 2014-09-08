@@ -34,6 +34,8 @@ class ProcessStateMonitor:
         self.stderr = kwargs.get('stderr', sys.stderr)
         self.eventname = kwargs.get('eventname', 'TICK_60')
         self.tickmins = self._get_tick_mins(self.eventname)
+        self.stderr_lines = kwargs.get('stderr_lines')
+        self.stdout_lines = kwargs.get('stdout_lines')
 
         self.batchmsgs = []
         self.batchmins = 0.0

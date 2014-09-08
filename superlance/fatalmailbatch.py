@@ -32,6 +32,8 @@ fatalmailbatch.py [--interval=<batch interval in minutes>]
         [--smtpHost=<smtp server>]
         [--userName=<smtp server username>]
         [--password=<smtp server password]
+        [--stderr_lines=<number of stderr lines to report>]
+        [--stdout_lines=<number of stdout lines to report>]
 
 Options:
 
@@ -45,6 +47,10 @@ Options:
 
 --subject - the email subject line
 
+--stderr_lines - number of stderr lines to report in the alert
+
+--stdout_lines - number of stdout lines to report in the alert
+
 A sample invocation:
 
 fatalmailbatch.py --toEmail="you@bar.com" --fromEmail="me@bar.com"
@@ -52,6 +58,10 @@ fatalmailbatch.py --toEmail="you@bar.com" --fromEmail="me@bar.com"
 """
 
 from supervisor import childutils
+from superlance.helpers import (
+    get_last_lines_of_process_stderr,
+    get_last_lines_of_process_stdout,
+)
 from superlance.process_state_email_monitor import ProcessStateEmailMonitor
 
 class FatalMailBatch(ProcessStateEmailMonitor):
@@ -67,7 +77,11 @@ class FatalMailBatch(ProcessStateEmailMonitor):
         pheaders, pdata = childutils.eventdata(payload+'\n')
 
         txt = 'Process %(groupname)s:%(processname)s failed to start too many \
-times' % pheaders
+times\n' % pheaders
+        if self.stderr_lines:
+            txt += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
+        if self.stdout_lines:
+            txt += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
         return '%s -- %s' % (childutils.get_asctime(self.now), txt)
 
 def main():

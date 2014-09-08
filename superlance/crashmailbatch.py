@@ -45,6 +45,10 @@ Options:
 
 --smtpHost  - the SMTP server's hostname or address (defaults to 'localhost')
 
+--stderr_lines - number of stderr lines to report in the alert
+
+--stdout_lines - number of stdout lines to report in the alert
+
 A sample invocation:
 
 crashmailbatch.py --toEmail="you@bar.com" --fromEmail="me@bar.com"
@@ -52,6 +56,10 @@ crashmailbatch.py --toEmail="you@bar.com" --fromEmail="me@bar.com"
 """
 
 from supervisor import childutils
+from superlance.helpers import (
+    get_last_lines_of_process_stderr,
+    get_last_lines_of_process_stdout,
+)
 from superlance.process_state_email_monitor import ProcessStateEmailMonitor
 
 class CrashMailBatch(ProcessStateEmailMonitor):
@@ -70,7 +78,11 @@ class CrashMailBatch(ProcessStateEmailMonitor):
             return None
 
         txt = 'Process %(groupname)s:%(processname)s (pid %(pid)s) died \
-unexpectedly' % pheaders
+unexpectedly\n' % pheaders
+        if self.stderr_lines:
+            txt += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
+        if self.stdout_lines:
+            txt += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
         return '%s -- %s' % (childutils.get_asctime(self.now), txt)
 
 def main():

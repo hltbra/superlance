@@ -65,7 +65,10 @@ crashmail.py -p program1 -p group1:program2 -m dev@example.com
 import os
 import sys
 
-from superlance.helpers import get_last_lines
+from superlance.helpers import (
+    get_last_lines_of_process_stderr,
+    get_last_lines_of_process_stdout,
+)
 from supervisor import childutils
 
 def usage():
