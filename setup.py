@@ -35,7 +35,7 @@ except (IOError, OSError):
     CHANGES = ''
 
 setup(name='superlance',
-      version='1.0.0-dev',
+      version='1.1.0-hugo',
       license='BSD-derived (http://www.repoze.org/LICENSE.txt)',
       description='superlance plugins for supervisord',
       long_description=README + '\n\n' +  CHANGES,
