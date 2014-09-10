@@ -178,8 +178,8 @@ def main(argv=sys.argv):
     sendmail = '/usr/sbin/sendmail -t -i'
     email = None
     optionalheader = None
-    stderr_lines = 0
-    stdout_lines = 0
+    stderr_lines = 10
+    stdout_lines = 10
 
     for option, value in opts:
 

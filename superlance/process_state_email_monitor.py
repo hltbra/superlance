@@ -50,9 +50,9 @@ class ProcessStateEmailMonitor(ProcessStateMonitor):
                         help="SMTP server user name (defaults to nothing)")
         parser.add_option("-p", "--password", dest="smtp_password", default="",
                         help="SMTP server password (defaults to nothing)")
-        parser.add_option("-q", "--stderr_lines", dest="stderr_lines", type="int", default=0,
+        parser.add_option("-q", "--stderr_lines", dest="stderr_lines", type="int", default=10,
                         help="Number of stderr lines to report")
-        parser.add_option("-w", "--stdout_lines", dest="stdout_lines", type="int", default=0,
+        parser.add_option("-w", "--stdout_lines", dest="stdout_lines", type="int", default=10,
                         help="Number of stdout lines to report")
         return parser
 
