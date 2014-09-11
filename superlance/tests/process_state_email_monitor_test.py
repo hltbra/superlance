@@ -1,4 +1,5 @@
 import unittest
+import socket
 import mock
 from superlance.compat import StringIO
 
@@ -104,7 +105,7 @@ class ProcessStateEmailMonitorTests(unittest.TestCase):
             'body': 'msg1\nmsg2',
             'to': self.to_emails,
             'from': 'testFrom@blah.com',
-            'subject': 'Test Alert',
+            'subject': 'Supervisor ERROR: %s' % (socket.gethostname()),
         }
         self.assertEqual(1, monitor.send_email.call_count)
         monitor.send_email.assert_called_with(expected)
@@ -113,11 +114,11 @@ class ProcessStateEmailMonitorTests(unittest.TestCase):
         self.assertEqual("""Sending notification email:
 To: %s
 From: testFrom@blah.com
-Subject: Test Alert
+Subject: Supervisor ERROR: %s
 Body:
 msg1
 msg2
-""" % (self.to_str), monitor.stderr.getvalue())
+""" % (self.to_str, socket.gethostname()), monitor.stderr.getvalue())
 
     def test_log_email_with_body_digest(self):
         bodyLen = 80

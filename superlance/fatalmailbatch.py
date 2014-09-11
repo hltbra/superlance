@@ -65,7 +65,8 @@ from superlance.helpers import (
 from superlance.process_state_email_monitor import ProcessStateEmailMonitor
 
 class FatalMailBatch(ProcessStateEmailMonitor):
-    
+
+    event_label = 'FATAL'
     process_state_events = ['PROCESS_STATE_FATAL']
 
     def __init__(self, **kwargs):

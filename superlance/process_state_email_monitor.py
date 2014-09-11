@@ -13,6 +13,7 @@
 #
 ##############################################################################
 import os
+import socket
 import sys
 import smtplib
 import copy
@@ -28,6 +29,7 @@ and sending email notification
 
 class ProcessStateEmailMonitor(ProcessStateMonitor):
     COMMASPACE = ', '
+    event_label = 'ERROR'
 
     @classmethod
     def _get_opt_parser(cls):
@@ -95,11 +97,17 @@ class ProcessStateEmailMonitor(ProcessStateMonitor):
 
         self.from_email = kwargs['from_email']
         self.to_emails = kwargs['to_emails']
-        self.subject = kwargs.get('subject')
+        # subject is ignored from command line, now it is a fixed string
+        # self.subject = kwargs.get('subject')
         self.smtp_host = kwargs.get('smtp_host', 'localhost')
         self.smtp_user = kwargs.get('smtp_user')
         self.smtp_password = kwargs.get('smtp_password')
         self.digest_len = 76
+
+    @property
+    def subject(self):
+        hostname = socket.gethostname()
+        return 'Supervisor %s: %s' % (self.event_label, hostname)
 
     def send_batch_notification(self):
         email = self.get_batch_email()

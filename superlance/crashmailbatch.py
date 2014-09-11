@@ -64,6 +64,7 @@ from superlance.process_state_email_monitor import ProcessStateEmailMonitor
 
 class CrashMailBatch(ProcessStateEmailMonitor):
 
+    event_label = 'CRASH'
     process_state_events = ['PROCESS_STATE_EXITED']
 
     def __init__(self, **kwargs):
