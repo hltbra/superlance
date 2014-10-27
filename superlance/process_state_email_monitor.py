@@ -68,11 +68,15 @@ class ProcessStateEmailMonitor(ProcessStateMonitor):
     def validate_cmd_line_options(cls, options):
         parser = cls._get_opt_parser()
         if not options.to_emails:
-            parser.print_help()
-            sys.exit(1)
+            options.to_emails = os.getenv('SUPERLANCE_TO_EMAILS')
+            if not options.to_emails:
+                parser.print_help()
+                sys.exit(1)
         if not options.from_email:
-            parser.print_help()
-            sys.exit(1)
+            options.from_email = os.getenv('SUPERLANCE_FROM_EMAIL')
+            if not options.from_email:
+                parser.print_help()
+                sys.exit(1)
 
         validated = copy.copy(options)
         validated.to_emails = [x.strip() for x in options.to_emails.split(",")]

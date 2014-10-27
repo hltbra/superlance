@@ -58,6 +58,24 @@ class ProcessStateEmailMonitorTests(unittest.TestCase):
         validated = klass.validate_cmd_line_options(options)
         self.assertEqual(['frog', 'log', 'dog'], validated.to_emails)
 
+    def test_validate_cmd_line_options_single_to_email_ok_from_env_var(self):
+        def fake_getenv(name):
+            values = {
+                'SUPERLANCE_FROM_EMAIL': 'bla',
+                'SUPERLANCE_TO_EMAILS': 'frog',
+            }
+            return values.get(name)
+
+        klass = self._get_target_class()
+        options = mock.Mock()
+        options.from_email = None
+        options.to_emails = None
+
+        with mock.patch('os.getenv', fake_getenv) as getenv_mock:
+            validated = klass.validate_cmd_line_options(options)
+        self.assertEqual('bla', validated.from_email)
+        self.assertEqual(['frog'], validated.to_emails)
+
     def test_send_email_ok(self):
         email = {
             'body': 'msg1\nmsg2',
