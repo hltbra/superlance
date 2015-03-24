@@ -36,6 +36,7 @@ class ProcessStateMonitor:
         self.tickmins = self._get_tick_mins(self.eventname)
         self.stderr_lines = kwargs.get('stderr_lines')
         self.stdout_lines = kwargs.get('stdout_lines')
+        self.programs_to_watch = kwargs.get('programs_to_watch', [])
 
         self.batchmsgs = []
         self.batchmins = 0.0
@@ -58,6 +59,13 @@ class ProcessStateMonitor:
             childutils.listener.ok(self.stdout)
 
     def handle_event(self, headers, payload):
+        pheaders, pdata = childutils.eventdata(payload+'\n')
+        if self.programs_to_watch:
+            program_name = pheaders['groupname'] + ":" + pheaders['processname']
+            # ignore programs that are not being watched
+            if program_name not in self.programs_to_watch:
+                return
+
         if headers['eventname'] in self.process_state_events:
             self.handle_process_state_change_event(headers, payload)
         elif headers['eventname'] == self.eventname:

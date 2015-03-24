@@ -56,6 +56,8 @@ class ProcessStateEmailMonitor(ProcessStateMonitor):
                         help="Number of stderr lines to report")
         parser.add_option("-w", "--stdout_lines", dest="stdout_lines", type="int", default=10,
                         help="Number of stdout lines to report")
+        parser.add_option("-W", "--watch", dest="programs_to_watch", type="str", default="",
+                        help="Supervisor programs to watch (groupname:process_name separated by commas)")
         return parser
 
     @classmethod
@@ -80,6 +82,7 @@ class ProcessStateEmailMonitor(ProcessStateMonitor):
 
         validated = copy.copy(options)
         validated.to_emails = [x.strip() for x in options.to_emails.split(",")]
+        validated.programs_to_watch = [x.strip() for x in options.programs_to_watch.split(",")]
         return validated
 
     @classmethod
