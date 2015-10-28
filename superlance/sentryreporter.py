@@ -46,9 +46,9 @@ optional arguments:
                         rely on the environment variable SENTRY_DSN (default:
                         None)
   -o STDOUT_LINES, --stdout-lines STDOUT_LINES
-                        the number of stdout lines to read (default: 50)
+                        the number of stdout lines to read (default: 10)
   -r STDERR_LINES, --stderr-lines STDERR_LINES
-                        the number of stderr lines to read (default: 50)
+                        the number of stderr lines to read (default: 10)
 """
 
 import argparse
@@ -104,7 +104,7 @@ class SentryReporter:
             if self.stdout_lines:
                 msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
 
-            self.stderr.write('unexpected exit, notifying sentry\n')
+            self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
             self.stderr.flush()
 
             self.notify_sentry(msg, event_type)
@@ -144,12 +144,12 @@ events.  It will send notifications to Sentry when processes that are children o
     parser.add_argument('-o', '--stdout-lines',
                         dest='stdout_lines',
                         type=int,
-                        default=50,
+                        default=10,
                         help='the number of stdout lines to read')
     parser.add_argument('-r', '--stderr-lines',
                         dest='stderr_lines',
                         type=int,
-                        default=50,
+                        default=10,
                         help='the number of stderr lines to read')
 
     args = parser.parse_args()
