@@ -80,7 +80,7 @@ setup(name='superlance',
       crashmail = superlance.crashmail:main
       crashmailbatch = superlance.crashmailbatch:main
       fatalmailbatch = superlance.fatalmailbatch:main
-      sentryreporter = superlance.crashsentry:main
+      sentryreporter = superlance.sentryreporter:main
       memmon = superlance.memmon:main
       """
       )
