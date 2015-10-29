@@ -16,7 +16,7 @@
 
 # An event listener meant to be subscribed to PROCESS_STATE_CHANGE
 # events.  It will send notifications to Sentry when processes that are children of
-# supervisord transition unexpectedly to the EXITED state.
+# supervisord transition unexpectedly to the EXITED or FATAL states.
 
 # A supervisor config snippet that tells supervisor to use this script
 # as a listener is below.
