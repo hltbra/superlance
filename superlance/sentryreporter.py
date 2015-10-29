@@ -75,43 +75,47 @@ class SentryReporter:
         self.sentry_dsn = sentry_dsn
         self.stderr_lines = stderr_lines
         self.stdout_lines = stdout_lines
+        # create and use self.{stdin,stdout,stderr} to make it easier to test
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         self.stderr = sys.stderr
 
-    def runforever(self, event_type, test=False):
+    def runforever(self, event_type):
         while True:
-            # we explicitly use self.stdin, self.stdout, and self.stderr
-            # instead of sys.* so we can unit test this code
-            headers, payload = childutils.listener.wait(self.stdin, self.stdout)
+            pheaders, should_ignore = self.get_event_details(event_type)
 
-            if headers['eventname'] != self.EVENT_NAMES[event_type]:
-                # do nothing with non-TICK events
+            if should_ignore:
                 childutils.listener.ok(self.stdout)
                 continue
 
-            pheaders, pdata = childutils.eventdata(payload+'\n')
-
-            # crashes may be expected. fatal errors can't.
-            if event_type == 'crash' and int(pheaders['expected']):
-                childutils.listener.ok(self.stdout)
-                continue
-
-            msg = 'Process %(groupname)s:%(processname)s exited expectedly\n\n' % pheaders
-
-            if self.stderr_lines:
-                msg += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
-            if self.stdout_lines:
-                msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
-
-            self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
-            self.stderr.flush()
-
+            msg = self.get_notification_message(pheaders)
             self.notify_sentry(msg, event_type)
 
             childutils.listener.ok(self.stdout)
 
+    def get_event_details(self, event_type):
+        headers, payload = childutils.listener.wait(self.stdin, self.stdout)
+        pheaders, pdata = childutils.eventdata(payload+'\n')
+
+        ignore = self.ignore_event(headers, pheaders, event_type)
+        return pheaders, ignore
+
+    def ignore_event(self, headers, pheaders, event_type):
+        # 1) event must be an expected event
+        # 2) crashes may be expected; fatal errors can't
+        return ((headers['eventname'] != self.EVENT_NAMES[event_type]) or
+                (event_type == 'crash' and int(pheaders['expected'])))
+
+    def get_notification_message(self, pheaders):
+        msg = 'Process %(groupname)s:%(processname)s exited expectedly\n\n' % pheaders
+        if self.stderr_lines:
+            msg += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
+        if self.stdout_lines:
+            msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
+        return msg
+
     def notify_sentry(self, msg, event_type):
+        self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
         client = raven.Client(dsn=self.sentry_dsn)
         title = 'Supervisor {}: {}'.format(event_type.upper(), self._md5(msg))
         try:
@@ -120,7 +124,7 @@ class SentryReporter:
                 data={'logger': 'superlance'},
                 extra={'msg': msg})
         except Exception as e:
-            self.write_stderr("Error notifying Sentry: %s\n" % e)
+            self.stderr.write("Error notifying Sentry: {}\n".format(e))
 
     def _md5(self, msg):
         return hashlib.md5(msg).hexdigest()
@@ -158,9 +162,7 @@ events.  It will send notifications to Sentry when processes that are children o
         sys.exit(1)
 
     if 'SUPERVISOR_SERVER_URL' not in os.environ:
-        sys.stderr.write('sentryreporter must be run as a supervisor event '
-                         'listener\n')
-        sys.stderr.flush()
+        sys.stderr.write('sentryreporter must be run as a supervisor event listener\n')
         sys.exit(1)
 
     prog = SentryReporter(args.sentry_dsn, args.stderr_lines, args.stdout_lines)
