@@ -76,16 +76,17 @@ class SentryReporterTests(unittest.TestCase):
 
     def test_notify_sentry(self):
         reporter = SentryReporter(sentry_dsn=None, stderr_lines=10, stdout_lines=10)
+        msg_header = 'boom header'
         msg = 'BOOM!!!'
         md5 = hashlib.md5(msg).hexdigest()
 
         with patch('superlance.sentryreporter.raven') as raven_mock:
-            reporter.notify_sentry(msg, 'crash')
+            reporter.notify_sentry(msg_header, msg, 'crash')
 
             raven_mock.Client().captureMessage.assert_called_with(
                 'Supervisor CRASH: {}'.format(md5),
                 data={'logger': 'superlance'},
-                extra={'msg': msg}
+                extra={'header': msg_header, 'msg': msg},
             )
 
 

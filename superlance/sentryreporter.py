@@ -88,8 +88,9 @@ class SentryReporter:
                 childutils.listener.ok(self.stdout)
                 continue
 
+            msg_header = 'Process %(groupname)s:%(processname)s exited expectedly\n\n' % pheaders
             msg = self.get_notification_message(pheaders)
-            self.notify_sentry(msg, event_type)
+            self.notify_sentry(msg_header, msg, event_type)
 
             childutils.listener.ok(self.stdout)
 
@@ -107,14 +108,14 @@ class SentryReporter:
                 (event_type == 'crash' and int(pheaders['expected'])))
 
     def get_notification_message(self, pheaders):
-        msg = 'Process %(groupname)s:%(processname)s exited expectedly\n\n' % pheaders
+        msg = ''
         if self.stderr_lines:
             msg += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
         if self.stdout_lines:
             msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
         return msg
 
-    def notify_sentry(self, msg, event_type):
+    def notify_sentry(self, msg_header, msg, event_type):
         self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
         client = raven.Client(dsn=self.sentry_dsn)
         title = 'Supervisor {}: {}'.format(event_type.upper(), self._md5(msg))
@@ -122,7 +123,10 @@ class SentryReporter:
             client.captureMessage(
                 title,
                 data={'logger': 'superlance'},
-                extra={'msg': msg})
+                extra={
+                    'header': msg_header,
+                    'msg': msg,
+                })
         except Exception as e:
             self.stderr.write("Error notifying Sentry: {}\n".format(e))
 
