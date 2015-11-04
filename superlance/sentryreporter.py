@@ -64,6 +64,9 @@ from superlance.helpers import (
 from supervisor import childutils
 
 
+SENTRY_STRING_MAX_LENGTH = 4096
+
+
 class SentryReporter:
 
     EVENT_NAMES = {
@@ -117,7 +120,10 @@ class SentryReporter:
 
     def notify_sentry(self, msg_header, msg, event_type):
         self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
-        client = raven.Client(dsn=self.sentry_dsn)
+        client = raven.Client(
+            dsn=self.sentry_dsn,
+            string_max_length=SENTRY_STRING_MAX_LENGTH,
+        )
         title = 'Supervisor {}: {}'.format(event_type.upper(), self._md5(msg))
         try:
             client.captureMessage(
