@@ -93,7 +93,7 @@ class SentryReporter:
 
             msg_header = 'Process %(groupname)s:%(processname)s exited unexpectedly' % pheaders
             stderr, stdout = self.get_notification_message(pheaders)
-            self.notify_sentry(msg_header, msg, event_type)
+            self.notify_sentry(msg_header, stderr, stdout, event_type)
 
             childutils.listener.ok(self.stdout)
 
