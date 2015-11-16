@@ -77,16 +77,36 @@ class SentryReporterTests(unittest.TestCase):
     def test_notify_sentry(self):
         reporter = SentryReporter(sentry_dsn=None, stderr_lines=10, stdout_lines=10)
         msg_header = 'boom header'
-        msg = 'BOOM!!!'
-        md5 = hashlib.md5(msg).hexdigest()
+        stdout = 'out-BOOM!!!'
+        stderr = '''\
+    w.buildFinished(name, s, results)
+  File "/usr/local/lib/python2.7/dist-packages/buildbot/status/mail.py", line 455, in buildFinished
+    return self.buildMessage(name, [build], results)
+  File "/usr/local/lib/python2.7/dist-packages/buildbot/status/mail.py", line 679, in buildMessage
+    build=build, results=build.results)
+  File "/usr/local/lib/python2.7/dist-packages/buildbot/status/mail.py", line 659, in buildMessageDict
+    self.master_status)
+  File "/opt/buildbot/master/jobs/__init__.py", line 425, in custom_mail_message
+    details=build_url,
+exceptions.UnicodeEncodeError: 'ascii' codec can't encode character u'\u2026' in position 127: ordinal not in range(128)'
+'''
+        stderr_body = '\n'.join(stderr.splitlines()[:-1])
+        stderr_last_line = stderr.splitlines()[-1]
+
+        md5 = hashlib.md5(stderr_body + stdout).hexdigest()
 
         with patch('superlance.sentryreporter.raven') as raven_mock:
-            reporter.notify_sentry(msg_header, msg, 'crash')
+            reporter.notify_sentry(msg_header, stderr, stdout, 'crash')
 
             raven_mock.Client().captureMessage.assert_called_with(
                 'Supervisor CRASH: {}'.format(md5),
                 data={'logger': 'superlance'},
-                extra={'header': msg_header, 'msg': msg},
+                extra={
+                    'header': msg_header,
+                    'stdout': stdout,
+                    'stderr': stderr_body,
+                    'stderr_last_line': stderr_last_line,
+                },
             )
 
 

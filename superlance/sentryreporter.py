@@ -92,7 +92,7 @@ class SentryReporter:
                 continue
 
             msg_header = 'Process %(groupname)s:%(processname)s exited unexpectedly' % pheaders
-            msg = self.get_notification_message(pheaders)
+            stderr, stdout = self.get_notification_message(pheaders)
             self.notify_sentry(msg_header, msg, event_type)
 
             childutils.listener.ok(self.stdout)
@@ -111,27 +111,35 @@ class SentryReporter:
                 (event_type == 'crash' and int(pheaders['expected'])))
 
     def get_notification_message(self, pheaders):
-        msg = ''
+        stderr = ''
+        stdout = ''
         if self.stderr_lines:
-            msg += get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
+            stderr = get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
+            stderr = stderr[1:-1]  # remove wrapping text (i.e., ------- LAST LINES...)
         if self.stdout_lines:
-            msg += get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
-        return msg
+            stdout = get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
+            stdout = stdout[1:-1]  # remove wrapping text (i.e., ------- LAST LINES...)
+        return (stderr, stdout)
 
-    def notify_sentry(self, msg_header, msg, event_type):
+    def notify_sentry(self, header, stderr, stdout, event_type):
         self.stderr.write('unexpected {}, notifying sentry\n'.format(event_type))
         client = raven.Client(
             dsn=self.sentry_dsn,
             string_max_length=SENTRY_STRING_MAX_LENGTH,
         )
-        title = 'Supervisor {}: {}'.format(event_type.upper(), self._md5(msg))
+
+        stderr_body = '\n'.join(stderr.splitlines()[:-1])
+        stderr_last_line = stderr.splitlines()[-1] if stderr else ''
+        title = 'Supervisor {}: {}'.format(event_type.upper(), self._md5(stderr_body + stdout))
         try:
             client.captureMessage(
                 title,
                 data={'logger': 'superlance'},
                 extra={
-                    'header': msg_header,
-                    'msg': msg,
+                    'header': header,
+                    'stderr': stderr_body,
+                    'stderr_last_line': stderr_last_line,
+                    'stdout': stdout,
                 })
         except Exception as e:
             self.stderr.write("Error notifying Sentry: {}\n".format(e))
