@@ -5,6 +5,8 @@ from supervisor import childutils
 __all__ = [
     'get_last_lines_of_process_stderr',
     'get_last_lines_of_process_stdout',
+    'get_last_lines_of_process_stderr_unwrapped',
+    'get_last_lines_of_process_stdout_unwrapped',
 ]
 
 MAX_BYTES_TO_READ = 1024 * 50 # 50kb
@@ -29,28 +31,38 @@ def get_proc_name(pheaders):
         return pheaders['processname']
 
 
-def get_last_lines_of_process_stderr(pheaders, stderr_lines):
+def get_last_lines_of_process_stderr_unwrapped(pheaders, stderr_lines):
     rpc = childutils.getRPCInterface(os.environ)
     proc_name = get_proc_name(pheaders)
-    last_lines = get_last_lines(
+    result = get_last_lines(
         proc_name,
         rpc.supervisor.tailProcessStderrLog,
         rpc.supervisor.readProcessStderrLog,
         stderr_lines)
+    return result
+
+
+def get_last_lines_of_process_stderr(pheaders, stderr_lines):
+    last_lines = get_last_lines_of_process_stderr_unwrapped(pheaders, stderr_lines)
     result = '-------LAST LINES OF STDERR---------\n'
     result += last_lines
     result += '-----------------END----------------\n'
     return result
 
 
-def get_last_lines_of_process_stdout(pheaders, stdout_lines):
+def get_last_lines_of_process_stdout_unwrapped(pheaders, stdout_lines):
     rpc = childutils.getRPCInterface(os.environ)
     proc_name = get_proc_name(pheaders)
-    last_lines = get_last_lines(
+    result = get_last_lines(
         proc_name,
         rpc.supervisor.tailProcessStdoutLog,
         rpc.supervisor.readProcessStdoutLog,
         stdout_lines)
+    return result
+
+
+def get_last_lines_of_process_stdout(pheaders, stdout_lines):
+    last_lines = get_last_lines_of_process_stdout_unwrapped(pheaders, stdout_lines)
     result = '-------LAST LINES OF STDOUT---------\n'
     result += last_lines
     result += '-----------------END----------------\n'

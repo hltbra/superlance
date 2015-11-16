@@ -58,8 +58,8 @@ import sys
 import raven
 
 from superlance.helpers import (
-    get_last_lines_of_process_stderr,
-    get_last_lines_of_process_stdout,
+    get_last_lines_of_process_stderr_unwrapped,
+    get_last_lines_of_process_stdout_unwrapped,
 )
 from supervisor import childutils
 
@@ -114,11 +114,9 @@ class SentryReporter:
         stderr = ''
         stdout = ''
         if self.stderr_lines:
-            stderr = get_last_lines_of_process_stderr(pheaders, self.stderr_lines)
-            stderr = stderr[1:-1]  # remove wrapping text (i.e., ------- LAST LINES...)
+            stderr = get_last_lines_of_process_stderr_unwrapped(pheaders, self.stderr_lines)
         if self.stdout_lines:
-            stdout = get_last_lines_of_process_stdout(pheaders, self.stdout_lines)
-            stdout = stdout[1:-1]  # remove wrapping text (i.e., ------- LAST LINES...)
+            stdout = get_last_lines_of_process_stdout_unwrapped(pheaders, self.stdout_lines)
         return (stderr, stdout)
 
     def notify_sentry(self, header, stderr, stdout, event_type):
